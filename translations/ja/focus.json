@@ -1,0 +1,11 @@
+{
+  "Apply ${presetName}": "${presetName}を適用",
+  "Apply %@": "%@を適用",
+  "Apply a DockFlow Preset": "DockFlowプリセットを適用",
+  "Choose a DockFlow preset": "DockFlowプリセットを選択",
+  "Choose the DockFlow preset to apply when this Focus turns on.": "この集中モードがオンになったときに適用するDockFlowプリセットを選択します。",
+  "Dock Preset": "Dockプリセット",
+  "DockFlow preset": "DockFlowプリセット",
+  "No preset selected": "プリセットが選択されていません",
+  "The DockFlow preset to apply when this Focus turns on": "この集中モードがオンになったときに適用するDockFlowプリセット"
+}

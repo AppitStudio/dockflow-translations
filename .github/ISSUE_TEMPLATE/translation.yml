@@ -1,0 +1,38 @@
+name: Suggest a translation improvement
+description: Tell us what DockFlow says and what would read better.
+title: "[Translation] "
+body:
+  - type: input
+    id: language
+    attributes:
+      label: Language
+      placeholder: e.g. Japanese
+    validations:
+      required: true
+  - type: input
+    id: screen
+    attributes:
+      label: Where did you see it?
+      placeholder: e.g. Settings → General
+    validations:
+      required: true
+  - type: textarea
+    id: current
+    attributes:
+      label: Current wording
+    validations:
+      required: true
+  - type: textarea
+    id: proposed
+    attributes:
+      label: Suggested wording
+      description: A short explanation is welcome, especially if the label is confusing or cut off.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: DockFlow version (optional)
+  - type: markdown
+    attributes:
+      value: "Suggested translation text is contributed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)."

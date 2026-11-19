@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+<title>DockFlow Translation Editor</title>
+<style>
+:root{color-scheme:light;--ink:#172947;--muted:#50647b;--line:#cdd7e2;--paper:#fff;--mist:#eff4f8;--blue:#234c9c;font:16px/1.5 "Source Sans 3",-apple-system,BlinkMacSystemFont,sans-serif;color:var(--ink);background:var(--mist)}
+*{box-sizing:border-box}body{margin:0}header{background:#18375d;color:white;padding:19px max(5vw,20px);font-weight:650;font-size:19px}
+main{max-width:1250px;margin:36px auto;padding:0 24px}h1,h2,p{margin:0 0 12px}h1{font-size:clamp(30px,4vw,48px);line-height:1.12;letter-spacing:-.04em}h2{font-size:22px}p{max-width:68ch}button,select,input,textarea{font:inherit;color:inherit}button,select,input{padding:8px 12px;border:1px solid var(--line);border-radius:7px;background:white}
+button{cursor:pointer}button:disabled{opacity:.55;cursor:default}button.primary{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:600}button:hover:enabled{border-color:var(--blue)}
+:focus-visible{outline:3px solid #2078a6;outline-offset:2px}label{display:grid;gap:4px;font-size:14px;font-weight:650}input,select,textarea{font-weight:400}
+.intro{padding:clamp(28px,6vw,76px) 0}.intro p{font-size:18px;color:var(--muted);margin:16px 0 22px}.top,.controls,.actions{display:flex;gap:16px;align-items:end;flex-wrap:wrap}
+.top{align-items:center;justify-content:space-between}.controls{margin:24px 0}.search{flex:1;min-width:160px}.layout{display:grid;grid-template-columns:minmax(225px,33%) 1fr;background:var(--paper);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+nav{border-right:1px solid var(--line);min-width:0;background:#f8fafc}nav h2{font-size:15px;padding:16px;margin:0;border-bottom:1px solid var(--line)}#list{max-height:58vh;overflow:auto}
+.item{display:block;text-align:left;width:100%;border:0;border-radius:0;padding:11px 16px;border-bottom:1px solid #e4ebf0;background:transparent;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.item[aria-current=true]{color:#fff;background:var(--blue)}
+article{min-width:0;padding:clamp(18px,3vw,36px)}.variant{margin:20px 0}.variant p{overflow-wrap:anywhere;white-space:pre-wrap}.source{padding:10px 14px;border-left:3px solid #83a9c7;background:var(--mist)}textarea{min-height:80px;padding:12px;border:1px solid #879bb2;border-radius:7px;width:100%;resize:vertical}.key{font:13px/1.45 monospace;color:var(--muted);overflow-wrap:anywhere}small{color:var(--muted)}#status{margin:12px 0;min-height:22px}#error{color:#942b26}button[hidden],[hidden]{display:none!important}
+@media(max-width:720px){main{padding:0 14px;margin:22px auto}.layout{grid-template-columns:1fr}nav{border-right:0;border-bottom:1px solid var(--line)}#list{max-height:21vh}.controls{gap:10px}.controls label{flex:1}.search{flex-basis:100%}}
+</style>
+<header>DockFlow</header>
+<main>
+  <input type="file" id="folder" webkitdirectory multiple hidden>
+  <section class="intro" id="intro">
+    <h1>Translation editor</h1>
+    <p>Open the <strong>translations</strong> folder from your downloaded DockFlow translations project. Compare the English and translated wording, then save your changes for a pull request.</p>
+    <button class="primary" id="open">Open translations folder…</button>
+  </section>
+  <p id="error" role="alert"></p>
+  <section id="workspace" hidden>
+    <div class="top"><h1>Translation editor</h1><button id="change">Change folder…</button></div>
+    <div class="controls">
+      <label>Language<select id="language"></select></label>
+      <label>File<select id="area"></select></label>
+      <label class="search">Search English, translation or key<input id="search" type="search" autocomplete="off"></label>
+    </div>
+    <div class="layout">
+      <nav aria-label="Matching strings"><h2 id="count"></h2><div id="list"></div></nav>
+      <article><h2 id="heading">Wording</h2><div id="details"></div></article>
+    </div>
+    <p id="status" role="status"></p>
+    <div class="actions"><button class="primary" id="save">Download edited file</button><small id="destination"></small></div>
+  </section>
+</main>
+<script>
+"use strict";
+const byId = id => document.getElementById(id);
+const languageNames = {de:"Deutsch", es:"Español", ja:"日本語"};
+const areas = {app:"DockFlow", core:"Shared actions", permissions:"Permissions", focus:"Focus filter", shortcuts:"Siri & Spotlight"};
+let files = new Map();
+let unsaved = new Set();
+let selected = "";
+const fileId = () => byId("language").value + "/" + byId("area").value;
+const entries = value => typeof value === "string" ? [["text",value]] : Object.entries(value);
+const el = (tag, text, cls) => {
+  const node = document.createElement(tag);
+  if (text !== undefined) node.textContent = text;
+  if (cls) node.className = cls;
+  return node;
+};
+function readStringMap(data) {
+  if (data === null || typeof data !== "object" || Array.isArray(data)) return false;
+  return Object.values(data).every(value => typeof value === "string" ||
+    (value !== null && typeof value === "object" && !Array.isArray(value) &&
+     Object.keys(value).length && Object.values(value).every(v => typeof v === "string")));
+}
+function chooseFolder() {
+  if (!unsaved.size || confirm("Discard edits you have not downloaded and open another folder?")) {
+    byId("folder").value = "";
+    byId("folder").click();
+  }
+}
+byId("open").onclick = byId("change").onclick = chooseFolder;
+byId("folder").onchange = async event => {
+  try {
+    const next = new Map();
+    for (const file of event.target.files) {
+      const m = file.webkitRelativePath.match(/(?:^|\/)translations\/(en|de|es|ja)\/(app|core|permissions|focus|shortcuts)\.json$/);
+      if (!m) continue;
+      const data = JSON.parse(await file.text());
+      if (!readStringMap(data)) throw Error("Unexpected text format in " + file.name);
+      next.set(m[1] + "/" + m[2], {values:data});
+    }
+    const available = Object.keys(languageNames).filter(l => Object.keys(areas).some(a => next.has(l+"/"+a) && next.has("en/"+a)));
+    if (!available.length) throw Error("Choose the extracted translations folder that contains en, de, es and ja.");
+    files = next;
+    unsaved.clear();
+    byId("language").replaceChildren(...available.map(l => new Option(languageNames[l],l)));
+    byId("error").textContent = "";
+    byId("intro").hidden = true;
+    byId("workspace").hidden = false;
+    byId("search").value = "";
+    changeLanguage();
+  } catch (error) { byId("error").textContent = error.message; }
+};
+function changeLanguage() {
+  const lang = byId("language").value, prev = byId("area").value;
+  const available = Object.keys(areas).filter(area => files.has(lang+"/"+area) && files.has("en/"+area));
+  byId("area").replaceChildren(...available.map(a => new Option(areas[a],a)));
+  if (available.includes(prev)) byId("area").value = prev;
+  updateList();
+}
+function updateList() {
+  const area = byId("area").value, src = files.get("en/"+area).values;
+  const target = files.get(fileId()).values;
+  const query = byId("search").value.trim().toLowerCase();
+  const keys = Object.keys(target).filter(key => [key,...entries(src[key]??key).map(v=>v[1]),...entries(target[key]).map(v=>v[1])].some(v=>v.toLowerCase().includes(query)));
+  // Show ordinary labels before format-only strings when browsing without a query.
+  keys.sort((a,b) => Number(!/^[A-Za-z]/.test(a))-Number(!/^[A-Za-z]/.test(b)) || a.localeCompare(b,"en"));
+  if (!keys.includes(selected)) selected = keys[0];
+  byId("count").textContent = keys.length +" matching "+(keys.length === 1 ? "string" : "strings");
+  const fragment = document.createDocumentFragment();
+  for (const key of keys) {
+    const button = el("button",typeof src[key]==="string" ? src[key] : key,"item");
+    button.setAttribute("aria-current",String(key === selected));
+    button.onclick = () => {
+      byId("list").querySelector('[aria-current="true"]')?.setAttribute("aria-current","false");
+      selected = key;
+      button.setAttribute("aria-current","true");
+      updateDetail();
+    };
+    fragment.append(button);
+  }
+  byId("list").replaceChildren(fragment);
+  updateDetail();
+}
+function updateStatus() {
+  byId("save").disabled = !unsaved.has(fileId());
+  byId("destination").textContent = "Save to translations/" + fileId() + ".json";
+  byId("status").textContent = unsaved.size ? "Files with edits to download: "+Array.from(unsaved).join(", ") : "";
+}
+function updateDetail() {
+  const box = byId("details");
+  box.replaceChildren();
+  updateStatus();
+  if (!selected) { box.append(el("p","Try another search or file.")); return; }
+  const {values} = files.get(fileId());
+  const english = files.get("en/"+byId("area").value).values[selected] ?? selected;
+  box.append(el("div","Key: "+selected,"key"));
+  for (const [variant,text] of entries(values[selected])) {
+    const part = el("div",undefined,"variant");
+    const source = typeof english === "string" ? english : english[variant] ?? english[variant.replace(/\.[^.]+$/,".other")];
+    part.append(el("small","English"+(variant === "text" ? "" : " · "+variant)), el("p",source??selected,"source"));
+    const label = el("label", languageNames[byId("language").value]+(variant === "text" ? "" : " · "+variant));
+    const input = el("textarea");
+    input.lang = byId("language").value;
+    input.value = text;
+    input.oninput = () => {
+      if (typeof values[selected] === "string") values[selected] = input.value;
+      else values[selected][variant] = input.value;
+      unsaved.add(fileId());
+      updateStatus();
+    };
+    label.append(input); part.append(label); box.append(part);
+  }
+}
+byId("language").onchange = changeLanguage;
+byId("area").onchange = byId("search").oninput = updateList;
+byId("save").onclick = () => {
+  const {values} = files.get(fileId());
+  for (const [key,value] of Object.entries(values)) {
+    if (entries(value).some(pair => !pair[1].trim())) {
+      byId("error").textContent = "Enter a translation before saving: "+key; return;
+    }
+  }
+  byId("error").textContent = "";
+  const url = URL.createObjectURL(new Blob([JSON.stringify(values,null,2)+"\n"],{type:"application/json"}));
+  const link = el("a"); link.href=url; link.download=byId("area").value+".json";
+  document.body.append(link); link.click(); link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),30000);
+  unsaved.delete(fileId()); updateStatus();
+  byId("status").textContent = "Download requested. Replace translations/"+fileId()+".json in your fork and open a pull request."+(unsaved.size ? " Other edited files: "+Array.from(unsaved).join(", ")+".":"");
+};
+window.addEventListener("beforeunload", event => { if (unsaved.size) {event.preventDefault();event.returnValue="";} });
+</script>
+</html>
+

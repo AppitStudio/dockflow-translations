@@ -1,0 +1,7 @@
+{
+  "Apply a ${applicationName} Preset": "${applicationName}のプリセットを適用",
+  "List ${applicationName} Presets": "${applicationName}のプリセットを一覧表示",
+  "Run a ${applicationName} Preset": "${applicationName}のプリセットを実行",
+  "Show my ${applicationName} Presets": "${applicationName}のプリセットを表示",
+  "What are my ${applicationName} Presets?": "${applicationName}のプリセットは何ですか？"
+}

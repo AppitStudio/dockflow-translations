@@ -1,0 +1,7 @@
+{
+  "Apply a ${applicationName} Preset": "Aplicar un preajuste de ${applicationName}",
+  "List ${applicationName} Presets": "Listar preajustes de ${applicationName}",
+  "Run a ${applicationName} Preset": "Ejecutar un preajuste de ${applicationName}",
+  "Show my ${applicationName} Presets": "Mostrar mis preajustes de ${applicationName}",
+  "What are my ${applicationName} Presets?": "¿Cuáles son mis preajustes de ${applicationName}?"
+}

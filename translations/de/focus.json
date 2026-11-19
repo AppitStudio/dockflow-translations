@@ -1,0 +1,11 @@
+{
+  "Apply ${presetName}": "${presetName} anwenden",
+  "Apply %@": "%@ anwenden",
+  "Apply a DockFlow Preset": "Ein DockFlow-Preset anwenden",
+  "Choose a DockFlow preset": "DockFlow-Preset wählen",
+  "Choose the DockFlow preset to apply when this Focus turns on.": "Wähle das DockFlow-Preset, das angewendet werden soll, wenn dieser Fokus aktiviert wird.",
+  "Dock Preset": "Dock-Preset",
+  "DockFlow preset": "DockFlow-Preset",
+  "No preset selected": "Kein Preset ausgewählt",
+  "The DockFlow preset to apply when this Focus turns on": "Das DockFlow-Preset, das angewendet werden soll, wenn dieser Fokus aktiviert wird"
+}
